@@ -213,7 +213,7 @@
             <input id="monthlyRent" type="number" min="0" step="50" value="4000" data-default="4000" />
           </div>
           <div class="field">
-            <label title="租期（月）｜Tenancy Length (months)">租期（月）｜Tenancy Length (months)</label>
+            <label title="测算周期（月）｜Calculation Period (months)">测算周期（月）｜Calculation Period (months)</label>
             <input id="months" type="number" min="1" step="1" value="12" data-default="12" />
           </div>
         </div>
@@ -237,10 +237,18 @@
           <div class="field">
             <label title="Savills 费率（含VAT，%）｜Savills Fee Rate (incl. VAT, %)">Savills 费率（含VAT，%）｜Savills Fee Rate (incl. VAT, %)</label>
             <input id="serviceRatePct" type="number" min="0" step="0.1" value="15" data-default="15" />
-            <p class="help" title="请输入合同约定的含VAT费率。｜Enter the agreed VAT-inclusive rate.">请输入合同约定的含VAT费率。｜Enter the agreed VAT-inclusive rate.</p>
+            <p class="help" title="默认采用标准费率，可按合同修改。｜Standard rate by default; amend to agreed rate.">默认采用标准费率，可按合同修改。｜Standard rate by default; amend to agreed rate.</p>
           </div>
         </div>
 
+        <div class="row" style="margin-top:10px;">
+          <div class="field">
+            <label>最低服务费（£，按合同可修改）｜Minimum Service Fee (£, editable)</label>
+            <input id="minimumFee" type="number" min="0" step="50" value="1800" data-default="1800" />
+            <p class="help">默认伦敦标准；仅管理最低总费含交接费。｜London defaults; management-only minimum includes handover.</p>
+          </div>
+        </div>
+        <p class="help">费率依据：Savills Residential Lettings Terms of Business V3 (June 2026). 实际收费以签署合同为准。｜Actual charges subject to agreed terms.</p>
         <div class="row" style="margin-top:10px;">
           <div class="field">
             <label title="固定费用（如适用，£）｜Fixed Fee (if applicable, £)">固定费用（如适用，£）｜Fixed Fee (if applicable, £)</label>
@@ -298,10 +306,10 @@
         <div class="row">
           <div class="field">
             <label title="租约文件费（£）｜Tenancy Paperwork (£)">租约文件费（£）｜Tenancy Paperwork (£)</label>
-            <input id="tenancyPaperwork" type="number" min="0" step="10" value="360" data-default="360" />
+            <input id="tenancyPaperwork" type="number" min="0" step="5" value="385" data-default="385" />
           </div>
           <div class="field">
-            <label title="续约文件费（£）｜Renewal Paperwork (£)">续约文件费（£）｜Renewal Paperwork (£)</label>
+            <label title="续约文件费（如适用，£285起）｜Renewal Paperwork (if applicable, from £285)">续约文件费（如适用，£285起）｜Renewal Paperwork (if applicable, from £285)</label>
             <input id="renewalPaperwork" type="number" min="0" step="10" value="0" data-default="0" />
           </div>
         </div>
@@ -312,7 +320,7 @@
             <input id="rtrPeople" type="number" min="0" step="1" value="1" data-default="1" />
           </div>
           <div class="field">
-            <label title="背景调查：人数（£45/人）｜References: people (£45/person)">背景调查：人数（£45/人）｜References: people (£45/person)</label>
+            <label title="背景调查：人数（£60/人）｜References: people (£60/person)">背景调查：人数（£60/人）｜References: people (£60/person)</label>
             <input id="refPeople" type="number" min="0" step="1" value="1" data-default="1" />
           </div>
         </div>
@@ -323,7 +331,7 @@
             <input id="depositYears" type="number" min="0" step="1" value="1" data-default="1" />
           </div>
           <div class="field">
-            <label title="清单/验房报告（总计，£）｜Inventory (total, £)">清单/验房报告（总计，£）｜Inventory (total, £)</label>
+            <label title="清单/验房报告（预估总计，£）｜Inventory (estimated total, £)">清单/验房报告（预估总计，£）｜Inventory (estimated total, £)</label>
             <input id="inventoryTotal" type="number" min="0" step="10" value="300" data-default="300" />
           </div>
         </div>
@@ -422,6 +430,8 @@
     short_let_mgmt: 0
   };
 
+  const DEFAULT_MINIMUM_FEE = {let_rent:1800, let_mgmt:3000, mgmt_only:1200, short_let_rent:1200, short_let_mgmt:2000};
+
   function clampInt(v, min=0){
     const n = Math.floor(Number(v));
     return Number.isFinite(n) ? Math.max(min, n) : min;
@@ -450,7 +460,8 @@
     const fixedFee = Math.max(0, num("fixedFee"));
     const grossRent = monthlyRent * months;
 
-    const savillsFee = (grossRent * serviceRate) + fixedFee;
+    const minimumFee = Math.max(0, num("minimumFee"));
+    const savillsFee = Math.max(minimumFee, (grossRent * serviceRate) + fixedFee);
 
     const serviceChargeYear = Math.max(0, num("serviceChargeYear"));
     const groundRentYear = Math.max(0, num("groundRentYear"));
@@ -475,7 +486,7 @@
     const otherOneOff = Math.max(0, num("otherOneOff"));
 
     const rightToRentCost = (rtrPeople * 60);
-    const referencesCost = (refPeople * 45);
+    const referencesCost = (refPeople * 60);
     const depositRegCost = (depositYears * 60);
 
     const oneOffCosts =
@@ -567,6 +578,7 @@
 
   $("serviceType").addEventListener("change", ()=>{
     const t = $("serviceType").value;
+    $("minimumFee").value = DEFAULT_MINIMUM_FEE[t] ?? 0;
     $("serviceRatePct").value = DEFAULT_RATE_PCT[t] ?? 0;
     $("fixedFee").value = DEFAULT_FIXED_FEE[t] ?? 0;
     recalc();
@@ -622,6 +634,7 @@
     inputs.forEach(el=>{ el.value = el.getAttribute("data-default"); });
 
     const t = $("serviceType").value;
+    $("minimumFee").value = DEFAULT_MINIMUM_FEE[t] ?? 0;
     $("serviceRatePct").value = DEFAULT_RATE_PCT[t] ?? num("serviceRatePct");
     $("fixedFee").value = DEFAULT_FIXED_FEE[t] ?? num("fixedFee");
 
@@ -639,7 +652,7 @@
 
   const ids = [
     "monthlyRent","months",
-    "serviceType","serviceRatePct","fixedFee",
+    "serviceType","serviceRatePct","fixedFee","minimumFee",
     "taxRatePreset","taxRateCustom",
     "serviceChargeYear","groundRentYear","insuranceYear","maintenanceMonth",
     "tenancyPaperwork","renewalPaperwork","rtrPeople","refPeople","depositYears","inventoryTotal","otherOneOff","otherMonthly"
@@ -651,6 +664,7 @@
 
   (function init(){
     const t = $("serviceType").value;
+    $("minimumFee").value = DEFAULT_MINIMUM_FEE[t] ?? 0;
     $("serviceRatePct").value = DEFAULT_RATE_PCT[t] ?? num("serviceRatePct");
     $("fixedFee").value = DEFAULT_FIXED_FEE[t] ?? num("fixedFee");
 
